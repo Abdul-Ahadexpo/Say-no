@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Access Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+
+  <h2 class="text-2xl font-bold mb-4" id="heading">Who?</h2>
+
+  <button id="allowLocationBtn" onclick="requestLocation()" class="btn btn-primary hidden">
+    Allow Location
+  </button>
+
+
+
+  <div id="allgoods">
+
+
+
+    <div class="flex items-center justify-center h-screen w-screen bg-gray-100">
+      <div id="proposalCard"
+        class="relative flex flex-col items-center justify-center w-[90vw] h-[90vh] bg-white rounded-3xl shadow-xl p-6 overflow-hidden">
+        <h2 class="text-4xl font-bold mb-6 text-black">Will you go to JAPAN??</h2>
+
+        <div class="relative w-full flex justify-center">
+          <button id="yesBtn" class="btn btn-info btn-outline mr-48 text-xl px-6 py-3">Yes</button>
+          <button id="noBtn" class="btn btn-error btn-outline ml-48 text-xl px-6 py-3 absolute">No, I hate
+            Japan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Popup Modal -->
+    <div id="popup" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+      <div class="bg-white p-6 rounded-xl text-gray-700">
+        <h2 class="text-2xl font-bold">Congratulations! 🎉</h2>
+        <p class="mt-4 text-lg">You are going to Japan with
+          <input id="nameInput" class="w-14 bg-slate-300 text-black max-w-28 rounded-lg" type="text" placeholder="Name">
+        </p>
+        <button id="submitName" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded">Confirm</button>
+      </div>
+    </div>
+
+    <!-- The Person I want to go to Japan with -->
+    <div id="travelCard" class="hidden absolute items-center justify-center min-h-screen w-full">
+      <div class="bg-white shadow-lg p-6 rounded-lg text-gray-800 text-center">
+        <h2 class="text-3xl font-bold">I'm going to Japan with <span id="savedName"></span>! 🎌✨</h2>
+      </div>
+    </div>
+
+
+
+  </div>
+
+  <script>
+    const noBtn = document.getElementById("noBtn");
+    const yesBtn = document.getElementById("yesBtn");
+    const proposalCard = document.getElementById("proposalCard");
+    const popup = document.getElementById("popup");
+    const submitName = document.getElementById("submitName");
+    const nameInput = document.getElementById("nameInput");
+    const travelCard = document.getElementById("travelCard");
+    const savedName = document.getElementById("savedName");
+    const heading = document.getElementById("heading");
+
+    // Load saved name from local storage
+    window.onload = () => {
+      let storedName = localStorage.getItem("japanBuddy");
+      if (storedName) {
+        showTravelCard(storedName);
+      }
+    };
+
+    yesBtn.addEventListener("click", function () {
+      popup.classList.remove("hidden");
+    });
+
+    submitName.addEventListener("click", function () {
+      let name = nameInput.value.trim();
+      if (name) {
+        localStorage.setItem("japanBuddy", name);
+        showTravelCard(name);
+      }
+    });
+
+    function showTravelCard(name) {
+      savedName.textContent = name;
+
+      // Hide everything
+      proposalCard.classList.add("hidden");
+      popup.classList.add("hidden");
+      heading.classList.add("hidden");
+
+      // Show travel card in the center
+      travelCard.classList.remove("hidden");
+      travelCard.classList.add("flex");
+    }
+
+
+
+
+    // Check if the button should be gone
+    if (localStorage.getItem("noBtnGone")) {
+      document.getElementById("noBtn").style.display = "none";
+    }
+
+    document.getElementById("noBtn").addEventListener("click", function () {
+      const noBtn = this;
+
+      // Step 1: Shake violently
+      noBtn.style.transition = "transform 0.1s ease-in-out";
+      let shakeInterval = setInterval(() => {
+        noBtn.style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
+      }, 50);
+
+      // Step 2: After 1 second, turn red & grow
+      setTimeout(() => {
+        clearInterval(shakeInterval);
+        noBtn.style.transform = "scale(1.2)";
+        noBtn.style.backgroundColor = "red";
+        noBtn.style.color = "white";
+      }, 1000);
+
+      // Step 3: After another 1 second, make it explode & disappear
+      setTimeout(() => {
+        noBtn.style.transition = "transform 0.5s ease-in-out, opacity 0.5s ease-out";
+        noBtn.style.transform = "scale(3)";
+        noBtn.style.opacity = "0";
+      }, 2000);
+
+      // Step 4: Remove it forever after explosion
+      setTimeout(() => {
+        noBtn.style.display = "none";
+        localStorage.setItem("noBtnGone", "true"); // Save that it's gone
+      }, 2500);
+    });
+
+  </script>
+
+  <script type="module">
+    import { saveLocationToFirebase, displayLocationsFromFirebase } from "./firebase.js";
+
+    function requestLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // Location allowed, show the div
+            document.getElementById("allgoods").classList.remove("hidden");
+            localStorage.setItem("locationAllowed", "true"); // Save to local storage
+          },
+          (error) => {
+            // Location denied, hide the div & show allow button
+            document.getElementById("allgoods").classList.add("hidden");
+            document.getElementById("allowLocationBtn").classList.remove("hidden");
+            localStorage.setItem("locationAllowed", "false");
+          }
+        );
+      } else {
+        alert("Geolocation is not supported by this browser.");
+      }
+    }
+
+    // On page load, check if location was allowed before
+    window.onload = () => {
+      let locationAllowed = localStorage.getItem("locationAllowed");
+      if (locationAllowed === "true") {
+        document.getElementById("allgoods").classList.remove("hidden");
+      } else {
+        document.getElementById("allgoods").classList.add("hidden");
+        document.getElementById("allowLocationBtn").classList.remove("hidden");
+      }
+    };
+
+
+    function saveLocation(position) {
+      saveLocationToFirebase(position.coords.latitude, position.coords.longitude);
+    }
+
+    function showError(error) {
+      document.getElementById("allowLocationBtn").classList.remove("hidden");
+    }
+
+    // Ask for location on page load & load data
+    window.onload = () => {
+      requestLocation();
+      displayLocationsFromFirebase();
+    };
+  </script>
+</body>
+
+
+
+</html>

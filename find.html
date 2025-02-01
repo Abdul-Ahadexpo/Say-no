@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Maps Location Finder</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+  <div class="card bg-white shadow-lg rounded-xl p-6 w-full max-w-md">
+    <h2 class="text-2xl font-bold text-center mb-4">🌍 Find Location</h2>
+
+    <div class="space-y-4">
+      <input type="text" id="latitude" placeholder="Enter Latitude" class="input input-bordered w-full" />
+      <input type="text" id="longitude" placeholder="Enter Longitude" class="input input-bordered w-full" />
+      <button onclick="generateMapLink()" class="btn btn-primary w-full">Get Location</button>
+    </div>
+
+    <p id="mapLink" class="mt-4 text-center"></p>
+  </div>
+
+  <script>
+    function generateMapLink() {
+      let lat = document.getElementById("latitude").value.trim();
+      let lon = document.getElementById("longitude").value.trim();
+
+      if (lat && lon) {
+        let url = `https://www.google.com/maps/search/${lat},${lon}`;
+        document.getElementById("mapLink").innerHTML = `<a href="${url}" target="_blank" class="btn btn-success mt-4">🌎 Open in Google Maps</a>`;
+      } else {
+        document.getElementById("mapLink").innerHTML = `<span class="text-red-500">⚠️ Please enter both latitude and longitude.</span>`;
+      }
+    }
+  </script>
+
+</body>
+
+</html>

@@ -5,6 +5,10 @@ import {
   ref,
   push,
   onValue,
+  get,
+  query,
+  orderByChild,
+  equalTo,
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
 // Firebase configuration
@@ -22,14 +26,38 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Function to save location to Firebase
-export function saveLocationToFirebase(lat, long) {
+// Function to check if the location already exists
+async function locationExists(lat, long) {
   const locationRef = ref(database, "locations");
-  push(locationRef, {
-    latitude: lat,
-    longitude: long,
-    timestamp: new Date().toLocaleString(),
-  });
+  const snapshot = await get(locationRef);
+
+  if (snapshot.exists()) {
+    const locations = snapshot.val();
+    return Object.values(locations).some(
+      (loc) => loc.latitude === lat && loc.longitude === long
+    );
+  }
+  return false;
+}
+
+// Function to save location to Firebase (only if it does not already exist)
+export async function saveLocationToFirebase(lat, long) {
+  try {
+    const exists = await locationExists(lat, long);
+    if (!exists) {
+      const locationRef = ref(database, "locations");
+      await push(locationRef, {
+        latitude: lat,
+        longitude: long,
+        timestamp: new Date().toLocaleString(),
+      });
+      console.log("✅ Location saved:", lat, long);
+    } else {
+      console.log("❌ Location already exists:", lat, long);
+    }
+  } catch (error) {
+    console.error("🔥 Error saving location:", error);
+  }
 }
 
 // Function to fetch and display locations

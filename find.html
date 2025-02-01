@@ -15,9 +15,11 @@
     <h2 class="text-2xl font-bold text-center mb-4">🌍 Find Location</h2>
 
     <div class="space-y-4">
-      <input type="text" id="latitude" placeholder="Enter Latitude" class="input input-bordered w-full" />
-      <input type="text" id="longitude" placeholder="Enter Longitude" class="input input-bordered w-full" />
-      <button onclick="generateMapLink()" class="btn btn-primary w-full">Get Location</button>
+      <input type="text" id="latitude" placeholder="Enter Latitude"
+        class="input input-bordered w-full text-gray-200 bg-slate-800" />
+      <input type="text" id="longitude" placeholder="Enter Longitude"
+        class="input input-bordered w-full bg-slate-800 text-gray-200" />
+      <button onclick="generateMapLink()" class="btn btn-error btn-outline w-full">Get Location</button>
     </div>
 
     <p id="mapLink" class="mt-4 text-center"></p>

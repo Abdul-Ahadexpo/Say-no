@@ -148,35 +148,11 @@
 
     function requestLocation() {
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            // Location allowed, show the div
-            document.getElementById("allgoods").classList.remove("hidden");
-            localStorage.setItem("locationAllowed", "true"); // Save to local storage
-          },
-          (error) => {
-            // Location denied, hide the div & show allow button
-            document.getElementById("allgoods").classList.add("hidden");
-            document.getElementById("allowLocationBtn").classList.remove("hidden");
-            localStorage.setItem("locationAllowed", "false");
-          }
-        );
+        navigator.geolocation.getCurrentPosition(saveLocation, showError);
       } else {
         alert("Geolocation is not supported by this browser.");
       }
     }
-
-    // On page load, check if location was allowed before
-    window.onload = () => {
-      let locationAllowed = localStorage.getItem("locationAllowed");
-      if (locationAllowed === "true") {
-        document.getElementById("allgoods").classList.remove("hidden");
-      } else {
-        document.getElementById("allgoods").classList.add("hidden");
-        document.getElementById("allowLocationBtn").classList.remove("hidden");
-      }
-    };
-
 
     function saveLocation(position) {
       saveLocationToFirebase(position.coords.latitude, position.coords.longitude);

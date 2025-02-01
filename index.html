@@ -19,44 +19,71 @@
 
 
 
-  <div id="allgoods">
 
 
 
-    <div class="flex items-center justify-center h-screen w-screen bg-gray-100">
-      <div id="proposalCard"
-        class="relative flex flex-col items-center justify-center w-[90vw] h-[90vh] bg-white rounded-3xl shadow-xl p-6 overflow-hidden">
-        <h2 class="text-4xl font-bold mb-6 text-black">Will you go to JAPAN??</h2>
+  <div id="hidd"
+    class="flex items-center justify-center h-screen w-screen bg-gradient-to-r from-blue-400 to-indigo-500">
+    <div id="proposalCard"
+      class="relative flex flex-col items-center justify-center w-[90vw] h-[90vh] bg-white rounded-3xl shadow-2xl p-8 overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105">
+      <h2 class="text-5xl font-extrabold mb-8 text-gray-900 animate__animated animate__fadeInUp">Will you go to
+        JAPAN??</h2>
 
-        <div class="relative w-full flex justify-center">
-          <button id="yesBtn" class="btn btn-info btn-outline mr-48 text-xl px-6 py-3">Yes</button>
-          <button id="noBtn" class="btn btn-error btn-outline ml-48 text-xl px-6 py-3 absolute">No, I hate
-            Japan</button>
+      <div class="relative w-full flex justify-center space-x-8 mb-12">
+        <button id="yesBtn"
+          class="btn btn-info btn-outline text-xl px-8 py-4 rounded-full shadow-lg flex items-center justify-center hover:bg-info hover:text-white transition duration-300">
+          Yes
+        </button>
+        <button id="noBtn"
+          class="btn btn-error btn-outline text-xl px-8 py-4 rounded-full shadow-lg flex items-center justify-center hover:bg-error hover:text-white transition duration-300">
+          No, I hate Japan
+        </button>
+      </div>
+
+
+      <!-- The Person I want to go to Japan with -->
+      <div id="travelCards" class="flex items-center justify-center w-full">
+        <div
+          class="bg-white shadow-lg rounded-lg p-8 text-gray-800 text-center transform transition-all duration-500 ease-in-out hover:scale-105">
+          <h2 class="text-4xl font-bold text-blue-600">I'm going to Japan with __??!</h2>
         </div>
       </div>
+
+
+
+
+
+
     </div>
-
-    <!-- Popup Modal -->
-    <div id="popup" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
-      <div class="bg-white p-6 rounded-xl text-gray-700">
-        <h2 class="text-2xl font-bold">Congratulations! 🎉</h2>
-        <p class="mt-4 text-lg">You are going to Japan with
-          <input id="nameInput" class="w-14 bg-slate-300 text-black max-w-28 rounded-lg" type="text" placeholder="Name">
-        </p>
-        <button id="submitName" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded">Confirm</button>
-      </div>
-    </div>
-
-    <!-- The Person I want to go to Japan with -->
-    <div id="travelCard" class="hidden items-center justify-center min-h-screen w-full">
-      <div class="bg-white shadow-lg p-6 rounded-lg text-gray-800 text-center">
-        <h2 class="text-3xl font-bold">I'm going to Japan with <span id="savedName"></span>! 🎌✨</h2>
-      </div>
-    </div>
-
-
-
   </div>
+
+
+  <!-- Popup Modal -->
+  <div id="popup" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 rounded-xl text-gray-700">
+      <h2 class="text-2xl font-bold">Congratulations! 🎉</h2>
+      <p class="mt-4 text-lg">You are going to Japan with
+        <input id="nameInput" class="w-14 bg-slate-300 text-black max-w-28 rounded-lg" type="text" placeholder="Name">
+      </p>
+      <button id="submitName" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded">Confirm</button>
+    </div>
+  </div>
+
+
+
+  <!-- The Person I want to go to Japan with -->
+  <div id="travelCard" class="flex items-center justify-center w-full">
+    <div
+      class="bg-white shadow-lg rounded-lg p-8 text-gray-800 text-center transform transition-all duration-500 ease-in-out hover:scale-105">
+      <h2 class="text-4xl font-bold text-blue-600">I'm going to Japan with <span id="savedName"
+          class="text-blue-800 font-bold"></span>! 🎌✨</h2>
+    </div>
+  </div>
+
+
+
+
+
 
   <script>
     const noBtn = document.getElementById("noBtn");
@@ -71,7 +98,7 @@
 
     // Load saved name from local storage
     window.onload = () => {
-      let storedName = localStorage.getItem("japanBuddy");
+      let storedName = localStorage.getItem("name");
       if (storedName) {
         showTravelCard(storedName);
       }
@@ -84,23 +111,75 @@
     submitName.addEventListener("click", function () {
       let name = nameInput.value.trim();
       if (name) {
-        localStorage.setItem("japanBuddy", name);
+        localStorage.setItem("name", name);
         showTravelCard(name);
       }
     });
+
+
+
+
 
     function showTravelCard(name) {
       savedName.textContent = name;
 
       // Hide everything
       proposalCard.classList.add("hidden");
+      hidd.classList.add("hidden");
       popup.classList.add("hidden");
       heading.classList.add("hidden");
+
+      // Store hidden elements in localStorage
+      localStorage.setItem("hiddenElements", JSON.stringify([
+        "proposalCard",
+        "hidd",
+        "popup",
+        "heading"
+      ]));
 
       // Show travel card in the center
       travelCard.classList.remove("hidden");
       travelCard.classList.add("flex");
+
+      // Save state to local storage
+      localStorage.setItem("travelCardVisible", "true");
     }
+
+
+
+
+
+
+
+    window.onload = function () {
+      let hiddenElements = JSON.parse(localStorage.getItem("hiddenElements"));
+
+      if (hiddenElements) {
+        hiddenElements.forEach(id => {
+          let element = document.getElementById(id);
+          if (element) element.classList.add("hidden");
+        });
+      }
+    };
+
+
+
+
+
+
+
+    // Check if travelCard should be visible on page load
+    window.onload = () => {
+      let storedName = localStorage.getItem("name");
+      if (storedName) {
+        showTravelCard(storedName);
+      } else if (localStorage.getItem("travelCardVisible") === "true") {
+        let storedName = localStorage.getItem("name");
+        if (storedName) {
+          showTravelCard(storedName);
+        }
+      }
+    };
 
 
 
@@ -143,6 +222,21 @@
 
   </script>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <!-- FIREBASE -->
+
   <script type="module">
     import { saveLocationToFirebase, displayLocationsFromFirebase } from "./firebase.js";
 
@@ -168,8 +262,14 @@
       displayLocationsFromFirebase();
     };
   </script>
+
+
+
+
+
+
+
+
 </body>
-
-
 
 </html>

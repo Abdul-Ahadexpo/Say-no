@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lets go to Jpan</title>
+  <title>Location Access Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -48,7 +48,7 @@
     </div>
 
     <!-- The Person I want to go to Japan with -->
-    <div id="travelCard" class="hidden absolute items-center justify-center min-h-screen w-full">
+    <div id="travelCard" class="hidden items-center justify-center min-h-screen w-full">
       <div class="bg-white shadow-lg p-6 rounded-lg text-gray-800 text-center">
         <h2 class="text-3xl font-bold">I'm going to Japan with <span id="savedName"></span>! 🎌✨</h2>
       </div>
@@ -107,7 +107,7 @@
 
     // Check if the button should be gone
     if (localStorage.getItem("noBtnGone")) {
-      document.getElementById("noBtn").style.display = "none";
+      document.getElementById("noBtn").style.display = "";
     }
 
     document.getElementById("noBtn").addEventListener("click", function () {

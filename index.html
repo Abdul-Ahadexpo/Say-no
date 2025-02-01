@@ -72,7 +72,7 @@
 
 
   <!-- The Person I want to go to Japan with -->
-  <div id="travelCard" class="flex items-center justify-center w-full">
+  <div id="travelCard" class="hidden items-center justify-center w-full">
     <div
       class="bg-white shadow-lg rounded-lg p-8 text-gray-800 text-center transform transition-all duration-500 ease-in-out hover:scale-105">
       <h2 class="text-4xl font-bold text-blue-600">I'm going to Japan with <span id="savedName"
@@ -128,7 +128,7 @@
       hidd.classList.add("hidden");
       popup.classList.add("hidden");
       heading.classList.add("hidden");
-
+      travelCard.classList.remove("hidden");
       // Store hidden elements in localStorage
       localStorage.setItem("hiddenElements", JSON.stringify([
         "proposalCard",

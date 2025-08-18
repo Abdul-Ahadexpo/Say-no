@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Access Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    // Import Firebase Functions
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuKeS4djQ-b8Lpj3Hr_92Qu2kUugeeR4c",
+      authDomain: "spinstrike-bd.firebaseapp.com",
+      databaseURL: "https://spinstrike-bd-default-rtdb.firebaseio.com",
+      projectId: "spinstrike-bd",
+      storageBucket: "spinstrike-bd.firebasestorage.app",
+      messagingSenderId: "178535326334",
+      appId: "1:178535326334:web:f4bbc2afa6b5b1ac9b6e2f",
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    // Function to request location
+    function requestLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(saveLocation, showError);
+      } else {
+        alert("Geolocation is not supported by this browser.");
+      }
+    }
+
+    // Function to save location to Firebase
+    function saveLocation(position) {
+      const locationRef = ref(database, "locations");
+      push(locationRef, {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        timestamp: new Date().toLocaleString(),
+      });
+    }
+
+    // Function to show error if location access is denied
+    function showError(error) {
+      document.getElementById("allowLocationBtn").classList.remove("hidden");
+    }
+
+    // Function to fetch and display locations from Firebase
+    function displayLocationsFromFirebase() {
+      const locationRef = ref(database, "locations");
+
+      onValue(locationRef, (snapshot) => {
+        const locations = snapshot.val();
+        const list = document.getElementById("locationList");
+        list.innerHTML = ""; // Clear the table before adding new data
+
+        if (locations) {
+          let index = 1;
+          Object.keys(locations).forEach((key) => {
+            const user = locations[key]; // Fetch user data inside each unique key
+            let row = `<tr class="border-b">
+                        <td class="p-2">${index++}</td>
+                        <td class="p-2">${user.latitude}</td>
+                        <td class="p-2">${user.longitude}</td>
+                        <td class="p-2">${user.timestamp}</td>
+                      </tr>`;
+            list.innerHTML += row;
+          });
+
+          // Hide the "Allow Location" button since data exists
+          document.getElementById("allowLocationBtn").classList.add("hidden");
+        }
+      });
+    }
+
+    // On page load, request location and display locations from Firebase
+    window.onload = () => {
+      requestLocation();
+      displayLocationsFromFirebase();
+    };
+  </script>
+</head>
+
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+  <h2 class="text-2xl font-bold mb-4">Who Allowed Location?</h2>
+
+  <!-- Button to request location (Hidden by default) -->
+  <button id="allowLocationBtn" onclick="requestLocation()" class="btn btn-primary hidden">
+    Allow Location
+  </button>
+
+  <!-- Table for location data -->
+  <div class="overflow-x-auto w-full max-w-2xl mt-4">
+    <table class="table w-full border">
+      <thead>
+        <tr class="bg-gray-200">
+          <th>#</th>
+          <th>Latitude</th>
+          <th>Longitude</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody id="locationList"></tbody>
+    </table>
+  </div>
+</body>
+
+</html>

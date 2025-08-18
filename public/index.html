@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You wanna go to Japan?</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+
+  <h2 class="text-2xl font-bold mb-4" id="heading"><a href="./locate.html">W</a>ho<a href="./find.html">?</a></h2>
+
+  <button id="allowLocationBtn" onclick="requestLocation()" class="btn btn-primary hidden">
+    Allow Location
+  </button>
+
+
+
+
+
+
+  <div id="hidd"
+    class="flex items-center justify-center h-screen w-screen bg-gradient-to-r from-blue-400 to-indigo-500">
+    <div id="proposalCard"
+      class="relative flex flex-col items-center justify-center w-[90vw] h-[90vh] bg-white rounded-3xl shadow-2xl p-8 overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105">
+      <h2 id="h2o" class=" font-extrabold mb-8 text-gray-900 animate__animated animate__fadeInUp">Will you go to
+        JAPAN??</h2>
+
+      <div class="relative w-full flex justify-center space-x-8 mb-12">
+        <button id="yesBtn"
+          class="btn btn-info btn-outline text-xl px-8 py-4 rounded-full shadow-lg flex items-center justify-center hover:bg-info hover:text-white transition duration-300">
+          Yes
+        </button>
+        <button id="noBtn"
+          class="btn btn-error btn-outline text-xl px-8 py-4 rounded-full shadow-lg flex items-center justify-center hover:bg-error hover:text-white transition duration-300">
+          No, I hate Japan
+        </button>
+      </div>
+
+
+      <!-- The Person I want to go to Japan with -->
+      <div id="travelCards" class="flex items-center justify-center w-full">
+        <div
+          class="bg-white shadow-lg rounded-lg p-8 text-gray-800 text-center transform transition-all duration-500 ease-in-out hover:scale-105">
+          <h2 id="h20" class="font-bold text-blue-600">I'm going to Japan with __??!</h2>
+        </div>
+      </div>
+
+
+
+
+
+
+    </div>
+  </div>
+
+
+  <!-- Popup Modal -->
+  <div id="popup" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 rounded-xl text-gray-700">
+      <h2 class="text-2xl font-bold">Congratulations! 🎉</h2>
+      <p class="mt-4 text-lg">You are going to Japan with
+        <input id="nameInput" class="w-24 max-w-28 h-8 text-center bg-slate-300 text-black text-sm rounded-lg"
+          type="text" placeholder="Name">
+      </p>
+      <button id="submitName" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded">Confirm</button>
+    </div>
+  </div>
+
+
+
+  <!-- The Person I want to go to Japan with -->
+  <div id="travelCard" class="hidden items-center justify-center w-full">
+    <div
+      class="bg-white shadow-lg rounded-lg p-8 text-gray-800 text-center transform transition-all duration-500 ease-in-out hover:scale-105">
+      <h2 class="text-4xl font-bold text-blue-600">I'm going to Japan with <span id="savedName"
+          class="text-blue-800 font-bold"></span>! 🎌✨</h2>
+    </div>
+  </div>
+
+</body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+  const noBtn = document.getElementById("noBtn");
+  const yesBtn = document.getElementById("yesBtn");
+  const proposalCard = document.getElementById("proposalCard");
+  const popup = document.getElementById("popup");
+  const submitName = document.getElementById("submitName");
+  const nameInput = document.getElementById("nameInput");
+  const travelCard = document.getElementById("travelCard");
+  const savedName = document.getElementById("savedName");
+  const heading = document.getElementById("heading");
+
+  // Load saved name from local storage
+  window.onload = () => {
+    let storedName = localStorage.getItem("name");
+    if (storedName) {
+      showTravelCard(storedName);
+    }
+  };
+
+  yesBtn.addEventListener("click", function () {
+    popup.classList.remove("hidden");
+  });
+
+  submitName.addEventListener("click", function () {
+    let name = nameInput.value.trim();
+    if (name) {
+      localStorage.setItem("name", name);
+      showTravelCard(name);
+    }
+  });
+
+
+
+
+
+  function showTravelCard(name) {
+    savedName.textContent = name;
+
+    // Hide everything
+    proposalCard.classList.add("hidden");
+    hidd.classList.add("hidden");
+    popup.classList.add("hidden");
+    heading.classList.add("hidden");
+    travelCard.classList.remove("hidden");
+    // Store hidden elements in localStorage
+    localStorage.setItem("hiddenElements", JSON.stringify([
+      "proposalCard",
+      "hidd",
+      "popup",
+      "heading"
+    ]));
+
+    // Show travel card in the center
+    travelCard.classList.remove("hidden");
+    travelCard.classList.add("flex");
+
+    // Save state to local storage
+    localStorage.setItem("travelCardVisible", "true");
+  }
+
+
+
+
+
+
+
+  window.onload = function () {
+    let hiddenElements = JSON.parse(localStorage.getItem("hiddenElements"));
+
+    if (hiddenElements) {
+      hiddenElements.forEach(id => {
+        let element = document.getElementById(id);
+        if (element) element.classList.add("hidden");
+      });
+    }
+  };
+
+
+
+
+
+
+
+  // Check if travelCard should be visible on page load
+  window.onload = () => {
+    let storedName = localStorage.getItem("name");
+    if (storedName) {
+      showTravelCard(storedName);
+    } else if (localStorage.getItem("travelCardVisible") === "true") {
+      let storedName = localStorage.getItem("name");
+      if (storedName) {
+        showTravelCard(storedName);
+      }
+    }
+  };
+
+
+
+
+  // Check if the button should be gone
+  if (localStorage.getItem("noBtnGone")) {
+    document.getElementById("noBtn").style.display = "";
+  }
+
+  document.getElementById("noBtn").addEventListener("click", function () {
+    const noBtn = this;
+
+    // Step 1: Shake violently
+    noBtn.style.transition = "transform 0.1s ease-in-out";
+    let shakeInterval = setInterval(() => {
+      noBtn.style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
+    }, 50);
+
+    // Step 2: After 1 second, turn red & grow
+    setTimeout(() => {
+      clearInterval(shakeInterval);
+      noBtn.style.transform = "scale(1.2)";
+      noBtn.style.backgroundColor = "red";
+      noBtn.style.color = "white";
+    }, 1000);
+
+    // Step 3: After another 1 second, make it explode & disappear
+    setTimeout(() => {
+      noBtn.style.transition = "transform 0.5s ease-in-out, opacity 0.5s ease-out";
+      noBtn.style.transform = "scale(3)";
+      noBtn.style.opacity = "0";
+    }, 2000);
+
+    // Step 4: Remove it forever after explosion
+    setTimeout(() => {
+      noBtn.style.display = "none";
+      localStorage.setItem("noBtnGone", "true"); // Save that it's gone
+    }, 2500);
+  });
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- FIREBASE -->
+
+<script type="module">
+  import { saveLocationToFirebase, displayLocationsFromFirebase } from "./firebase.js";
+
+  function requestLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(saveLocation, showError);
+    } else {
+      alert("Geolocation is not supported by this browser.");
+    }
+  }
+
+  function saveLocation(position) {
+    saveLocationToFirebase(position.coords.latitude, position.coords.longitude);
+  }
+
+  function showError(error) {
+    document.getElementById("allowLocationBtn").classList.remove("hidden");
+  }
+
+  // Ask for location on page load & load data
+  window.onload = () => {
+    requestLocation();
+    displayLocationsFromFirebase();
+  };
+</script>
+
+</html>

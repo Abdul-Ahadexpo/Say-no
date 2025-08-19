@@ -79,4 +79,52 @@
     background-size: 200% 200%;
     animation: gradient 3s ease infinite;
   }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    /* Ensure text is readable on mobile */
+    .text-responsive {
+      font-size: clamp(0.875rem, 2.5vw, 1rem);
+    }
+    
+    /* Better touch targets */
+    button, a {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Improved spacing on mobile */
+    .mobile-spacing {
+      padding: 1rem;
+    }
+    
+    /* Better form inputs on mobile */
+    input, textarea {
+      font-size: 16px; /* Prevents zoom on iOS */
+    }
+  }
+
+  /* Smooth scrolling for all devices */
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better focus states for accessibility */
+  *:focus-visible {
+    outline: 2px solid #ec4899;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Loading states */
+  .loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  /* Image loading optimization */
+  img {
+    loading: lazy;
+  }
 }

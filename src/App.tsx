@@ -532,7 +532,7 @@ function App() {
 
   // Admin authentication
   const handleAdminLogin = () => {
-    if (adminPassword === 'secret123') {
+    if (adminPassword === 'ily') {
       setIsAdminAuthenticated(true);
       loadVisitorData();
     } else {
